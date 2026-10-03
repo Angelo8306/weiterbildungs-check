@@ -654,6 +654,12 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
 .send-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); max-width: min(92vw, 520px); background: var(--ink); color: var(--paper); padding: 12px 16px; border-radius: 10px; font-size: 15px; box-shadow: var(--shadow); z-index: 40; }
 .foot { font-size: 12.5px; color: var(--ink-3); padding-top: 8px; }
+.dirbars { display: grid; gap: 8px; padding: 12px 0 4px; }
+.dirbar { display: grid; grid-template-columns: minmax(0, 1fr) 110px 28px; align-items: center; gap: 10px; font-size: 14.5px; color: var(--ink-2); }
+.dirbar.top { color: var(--ink); font-weight: 700; }
+.dirbar .meter { width: auto; }
+.dirbar .mono { text-align: right; }
+label.chip[hidden] { display: none !important; }
 </style>
 
 <header class="top">
@@ -1245,6 +1251,7 @@ const FOERDER = {
   svPauschale: 0.2,    // pauschaler Arbeitgeberanteil Sozialversicherung, der im Zuschuss steckt
   svReal: 0.21,        // grobe Schätzung des tatsächlichen Arbeitgeberanteils
   vorlaufTage: 56,     // Antrag und Bewilligung: mindestens 8 Wochen einplanen
+  mindestlohn: 13.9,   // gesetzlicher Mindestlohn je Stunde seit 1. Januar 2026
   agsTelefon: "0800 4 5555 20",
 };
 /*FOERDER_END*/
@@ -1317,6 +1324,70 @@ const WANTS = [
   ["kreativ", "Kreativ arbeiten"],
   ["menschen", "Mit Menschen arbeiten"],
 ];
+// Schritt 3 „Richtung“: Fragen, die zu einer klaren Entscheidung führen
+const ZIEL_WARUM = [
+  ["perspektive", "Keine Entwicklung mehr möglich"],
+  ["geld", "Zu wenig Geld"],
+  ["koerper", "Körperlich zu anstrengend"],
+  ["langweilig", "Es interessiert mich nicht mehr"],
+  ["familie", "Ich will raus aus dem Familienbetrieb"],
+  ["zukunft", "Ich will einen sicheren Job mit Zukunft"],
+  ["sonst", "Etwas anderes"],
+];
+const ZIEL_ALLTAG = [
+  ["pc", "Am Rechner: Probleme finden und lösen, Systeme am Laufen halten"],
+  ["kreativ", "Inhalte, Kampagnen, Design – etwas sichtbar machen"],
+  ["menschen", "Mit Menschen: beraten, betreuen, organisieren"],
+  ["draussen", "Unterwegs oder vor Ort, körperlich aktiv"],
+  ["unklar", "Weiß ich noch nicht"],
+];
+const ZIEL_TEMPO = [
+  ["schnell", "Schnell raus und arbeiten – auch wenn der Job einfacher ist"],
+  ["gross", "Ein Jahr investieren für den größeren Sprung"],
+  ["unklar", "Kann ich nicht sagen"],
+];
+// Jobbilder: [Schlüssel, Bezeichnung, Richtung, Themen mit Gewicht wie bei den Kurs-Tags]
+const JOBS = [
+  ["itsupport", "IT-Support / Helpdesk", "it", { technik: 4, netzwerk: 2 }],
+  ["admin", "Systemadministrator/in", "it", { netzwerk: 4, technik: 3, cloud: 2 }],
+  ["secanalyst", "IT-Security-Analyst/in (SOC, Pentest)", "it", { security: 4, netzwerk: 2 }],
+  ["dev", "Software- oder Web-Entwickler/in", "it", { coding: 4, web: 3 }],
+  ["gamedev", "Game-Entwickler/in", "it", { games: 4, coding: 3 }],
+  ["marketing", "Online-Marketing-Manager/in", "digital", { marketing: 4, design: 2 }],
+  ["kibuero", "KI-Anwender/in im Büro", "digital", { ki: 4 }],
+  ["data", "Data Analyst/in", "digital", { data: 4, ki: 2 }],
+  ["hr", "Recruiter/in, Personal", "digital", { hr: 4 }],
+  ["sales", "Vertrieb, Kundenberatung", "digital", { sales: 4 }],
+  ["pm", "Projektmanager/in", "digital", { pm: 4 }],
+  ["sicherheit", "Sicherheitskraft (Objektschutz, Veranstaltungen)", "praxis", { objektschutz: 4 }],
+  ["kfz", "Kfz-Techniker/in (E-Autos, Smart Repair)", "praxis", { kfz: 4, elektro: 2 }],
+  ["solar", "Solar- und Elektrotechnik", "praxis", { elektro: 4 }],
+  ["industrie", "Industrie, Automatisierung, Logistik", "praxis", { industrie: 4, logistik: 3 }],
+];
+const JOB_TAGS = Object.fromEntries(JOBS.map(([k, , , t]) => [k, t]));
+const TECH_ERLEBNIS = [
+  ["pc", "PC zusammengebaut oder aufgerüstet"],
+  ["os", "Windows oder Linux neu installiert"],
+  ["router", "Router/WLAN eingerichtet oder ein Netzwerkproblem gelöst"],
+  ["mods", "Konsole oder Handy gemoddet, Mods installiert, einen Game-Server aufgesetzt"],
+  ["cmd", "Kommandozeile oder Skripte benutzt"],
+  ["hack", "Kali Linux, TryHackMe, Hack The Box oder Ähnliches ausprobiert"],
+  ["videos", "Videos über Hacking oder IT-Sicherheit geschaut"],
+  ["nichts", "Nichts davon"],
+];
+// Richtungen: [Schlüssel, Name, Kurs-Tags, die dazugehören]
+const DIRS = [
+  ["it", "IT & Technik", ["technik", "netzwerk", "security", "cloud", "coding", "games", "web"]],
+  ["digital", "Digital & Business", ["marketing", "ki", "data", "design", "pm", "hr", "sales"]],
+  ["praxis", "Praxis & Sicherheit", ["objektschutz", "kfz", "elektro", "industrie", "logistik"]],
+];
+const DIR_TEXT = {
+  it: "Rechner, Netzwerke, Sicherheit – Probleme finden und lösen. Einstieg über IT-Grundlagen, danach Support, Administration und IT-Sicherheit.",
+  digital: "Marketing, KI, Daten, Organisation – digital arbeiten, ohne tief in die Technik zu gehen.",
+  praxis: "Anpacken, vor Ort, mit Verantwortung: Sicherheit, Fahrzeuge, Energie, Industrie.",
+};
+// Themen, die zu einem Interesse dazugehören (IT-Sicherheit braucht Netzwerke und Technik)
+const IMPLIED_TAGS = { security: ["netzwerk", "technik"], cloud: ["netzwerk", "technik"], netzwerk: ["technik"], coding: ["technik"], games: ["coding"], web: ["coding", "design"] };
 const ORTE = [...new Set(COURSES.flatMap((c) => c.orte || []))].sort((a, b) => a.localeCompare(b, "de"));
 const DOCS = [
   ["Von dir", [
@@ -1349,7 +1420,7 @@ const BESCHAEFTIGT = ["angestellt", "minijob", "gekuendigt"];
 const STEPS = [
   { key: "start", nav: "Start" },
   {
-    key: "voraus", nav: "Voraussetzungen", eyebrow: "Schritt 1 von 7",
+    key: "voraus", nav: "Voraussetzungen", eyebrow: "Schritt 1 von 8",
     title: "Was bringst du mit?",
     lead: "Damit wir sehen, welche Kurse du direkt starten kannst und wo ein Einstiegsmodul sinnvoll ist.",
     blocks: [
@@ -1385,155 +1456,184 @@ const STEPS = [
     ],
   },
   {
-    key: "interessen", nav: "Interessen", eyebrow: "Schritt 2 von 7",
+    key: "interessen", nav: "Interessen", eyebrow: "Schritt 2 von 8",
     title: "Was reizt dich – und was gar nicht?",
     lead: "Wähle alles, was dich interessiert, auch wenn du darin noch keine Erfahrung hast.",
     blocks: [
       { title: "Interessen", code: "5", qs: [
         { id: "interessen", type: "checks", code: "5.1", label: "Was reizt dich?", req: true, options: INTERESTS.map(([k, l]) => [k, l]) },
-        { id: "nogos", type: "checks", code: "5.2", label: "Was willst du auf keinen Fall?", options: NOGOS },
-        { id: "wuensche", type: "checks", code: "5.3", label: "Was ist dir beim nächsten Job wichtig?", options: WANTS },
-        { id: "berufswunsch", type: "text", code: "5.4", label: "Hast du schon einen Berufswunsch?", ph: "z. B. IT-Administrator, Data Analyst, Pentester" },
+        { id: "hauptinteresse", type: "radio", code: "5.2", label: "Und was davon ist dir am wichtigsten?", hint: "Das zählt bei den Vorschlägen doppelt.", req: true, stack: true, options: INTERESTS.map(([k, l]) => [k, l]), show: (f) => (f.interessen || []).length >= 2 },
+        { id: "nogos", type: "checks", code: "5.3", label: "Was willst du auf keinen Fall?", options: NOGOS },
+        { id: "wuensche", type: "checks", code: "5.4", label: "Was ist dir beim nächsten Job wichtig?", options: WANTS },
+        { id: "berufswunsch", type: "text", code: "5.5", label: "Hast du schon einen Berufswunsch?", ph: "z. B. IT-Administrator, Data Analyst, Pentester" },
       ] },
     ],
   },
   {
-    key: "rahmen", nav: "Rahmen", eyebrow: "Schritt 3 von 7",
+    key: "richtung", nav: "Richtung", eyebrow: "Schritt 3 von 8",
+    title: "Welche Richtung passt wirklich zu dir?",
+    lead: "Ein paar Fragen, die dir die Entscheidung leichter machen. Es gibt keine falschen Antworten – ehrlich hilft dir am meisten.",
+    blocks: [
+      { title: "Dein Ziel", code: "6", qs: [
+        { id: "ziel_warum", type: "checks", code: "6.1", label: "Warum willst du etwas ändern?", req: true, options: ZIEL_WARUM },
+        { id: "ziel_alltag", type: "radio", code: "6.2", label: "Stell dir deinen Arbeitstag in drei Jahren vor. Was passt am besten?", req: true, stack: true, options: ZIEL_ALLTAG },
+        { id: "ziel_job", type: "checks", code: "6.3", label: "Welche Jobs könntest du dir wirklich vorstellen?", hint: "Nur, was du dir ernsthaft vorstellen kannst – am besten höchstens drei.", req: true, options: JOBS.map(([k, l]) => [k, l]) },
+        { id: "ziel_tempo", type: "radio", code: "6.4", label: "Was ist dir wichtiger?", req: true, stack: true, options: ZIEL_TEMPO },
+      ] },
+      { title: "Lernen & Technik", code: "7", qs: [
+        { id: "lern_12m", type: "radio", code: "7.1", label: "Könntest du 12 Monate lang Montag bis Freitag von 9 bis 17 Uhr online lernen – mit Prüfungen?", req: true, stack: true, options: [["ja", "Ja, das traue ich mir zu"], ["eher", "Eher ja, aber ich habe Respekt davor"], ["nein", "Nein, das ist mir zu lang"]] },
+        { id: "lern_zuletzt", type: "radio", code: "7.2", label: "Wann hast du zuletzt über längere Zeit etwas Neues gelernt?", stack: true, options: [["laufend", "Ich lerne laufend etwas – Videos, Tutorials, Kurse"], ["ausbildung", "Zuletzt in der Ausbildung"], ["schule", "Zuletzt in der Schule"]] },
+        { id: "lern_dran", type: "radio", code: "7.3", label: "Etwas klappt nicht – ein Gerät, ein Spiel, eine Einstellung. Was machst du?", req: true, stack: true, options: [["lang", "Ich bleibe dran, bis ich es verstanden habe"], ["suche", "Ich suche im Netz nach einer Lösung"], ["frage", "Ich frage jemanden"], ["lasse", "Ich lasse es bleiben"]] },
+        { id: "tech_erlebnis", type: "checks", code: "7.4", label: "Was hast du schon mal gemacht?", options: TECH_ERLEBNIS },
+        { id: "tech_hilfe", type: "radio", code: "7.5", label: "Wenn bei Familie oder Freunden PC, Handy oder WLAN spinnt – wer wird gefragt?", stack: true, options: [["ich", "Ich – und ich kriege es meistens hin"], ["ich_suche", "Ich – mit Suchen im Internet"], ["andere", "Jemand anderes"]] },
+        { id: "tech_englisch", type: "radio", code: "7.6", label: "Verstehst du eine englische Anleitung oder ein englisches Video?", options: [["ja", "Ja, problemlos"], ["teils", "Mit Mühe"], ["nein", "Nein"]] },
+      ] },
+      { title: "Deine Lage", code: "8", qs: [
+        { id: "lage_betrieb", type: "radio", code: "8.1", label: "Würde dein Betrieb dich auch für 12 Monate freistellen?", req: true, stack: true, options: [["ja", "Ja, ist besprochen"], ["wohl", "Wahrscheinlich ja"], ["unklar", "Weiß ich nicht"], ["kurz", "Nein, höchstens ein paar Monate"]], show: isIn("situation", BESCHAEFTIGT) },
+        { id: "lage_geld", type: "radio", code: "8.2", label: "Dein Gehalt läuft während der Weiterbildung weiter. Kommst du damit ein Jahr lang klar?", stack: true, options: [["ja", "Ja"], ["knapp", "Knapp, aber ja"], ["nein", "Nein"]], show: isIn("situation", BESCHAEFTIGT) },
+        { id: "lage_umfeld", type: "radio", code: "8.3", label: "Wer steht hinter deiner Entscheidung?", stack: true, options: [["ja", "Familie oder Partner/in stehen dahinter"], ["offen", "Noch nicht besprochen"], ["gegen", "Eher Gegenwind"]] },
+        { id: "lage_zweifel", type: "textarea", code: "8.4", label: "Was hält dich gerade noch zurück?", rows: 3, ph: "z. B. Angst, es nicht zu schaffen; das Geld; was die Familie sagt" },
+        { id: "lage_frage", type: "textarea", code: "8.5", label: "Welche Frage müssten wir dir beantworten, damit du dich entscheiden kannst?", rows: 3, ph: "Schreib sie einfach auf – wir melden uns." },
+      ] },
+    ],
+  },
+  {
+    key: "rahmen", nav: "Rahmen", eyebrow: "Schritt 4 von 8",
     title: "Wann, wie lange, wie?",
     lead: "Das gleichen wir mit unseren Startterminen und Formaten ab.",
     blocks: [
-      { title: "Zeit & Format", code: "6", qs: [
-        { id: "start", type: "radio", code: "6.1", label: "Wann möchtest du starten?", req: true, options: [["asap", "So bald wie möglich"], ["1-3", "In 1–3 Monaten"], ["3-6", "In 3–6 Monaten"], ["egal", "Flexibel"]] },
-        { id: "dauer", type: "radio", code: "6.2", label: "Wie lange darf die Weiterbildung höchstens dauern?", req: true, stack: true, options: [["3", "Bis 3 Monate"], ["6", "Bis 6 Monate"], ["12", "Bis 12 Monate"], ["24", "Bis 24 Monate – auch eine Umschulung mit IHK-Abschluss"], ["egal", "Egal, Hauptsache es passt"]] },
-        { id: "zeitmodell", type: "radio", code: "6.3", label: "Vollzeit oder Teilzeit?", req: true, options: [["vz", "Vollzeit"], ["tz", "Teilzeit"], ["egal", "Egal"]] },
-        { id: "lernform", type: "radio", code: "6.4", label: "Wie möchtest du lernen?", req: true, options: [["online", "Online von zu Hause"], ["praesenz", "Vor Ort"], ["egal", "Beides okay"]] },
-        { id: "orte", type: "checks", code: "6.5", label: "Welche Standorte wären für dich erreichbar?", options: ORTE.map((o) => [o, o]), show: isIn("lernform", ["praesenz", "egal"]) },
+      { title: "Zeit & Format", code: "9", qs: [
+        { id: "start", type: "radio", code: "9.1", label: "Wann möchtest du starten?", req: true, options: [["asap", "So bald wie möglich"], ["1-3", "In 1–3 Monaten"], ["3-6", "In 3–6 Monaten"], ["egal", "Flexibel"]] },
+        { id: "dauer", type: "radio", code: "9.2", label: "Wie lange darf die Weiterbildung höchstens dauern?", req: true, stack: true, options: [["3", "Bis 3 Monate"], ["6", "Bis 6 Monate"], ["12", "Bis 12 Monate"], ["24", "Bis 24 Monate – auch eine Umschulung mit IHK-Abschluss"], ["egal", "Egal, Hauptsache es passt"]] },
+        { id: "zeitmodell", type: "radio", code: "9.3", label: "Vollzeit oder Teilzeit?", req: true, options: [["vz", "Vollzeit"], ["tz", "Teilzeit"], ["egal", "Egal"]] },
+        { id: "lernform", type: "radio", code: "9.4", label: "Wie möchtest du lernen?", req: true, options: [["online", "Online von zu Hause"], ["praesenz", "Vor Ort"], ["egal", "Beides okay"]] },
+        { id: "orte", type: "checks", code: "9.5", label: "Welche Standorte wären für dich erreichbar?", options: ORTE.map((o) => [o, o]), show: isIn("lernform", ["praesenz", "egal"]) },
       ] },
     ],
     note: "Der Antrag muss vor Kursbeginn gestellt sein. Plane für Antrag und Zusage etwa 2 bis 3 Monate ein.",
   },
-  { key: "vorschlaege", nav: "Vorschläge", eyebrow: "Schritt 4 von 7", title: "Deine Vorschläge", lead: "" },
+  { key: "vorschlaege", nav: "Vorschläge", eyebrow: "Schritt 5 von 8", title: "Deine Vorschläge", lead: "" },
   {
-    key: "person", nav: "Über dich", eyebrow: "Schritt 5 von 7",
+    key: "person", nav: "Über dich", eyebrow: "Schritt 6 von 8",
     title: "Angaben für den Antrag",
     lead: "Diese Daten brauchen wir für den Bildungsgutschein und den Antrag deines Betriebs.",
     blocks: [
-      { title: "Persönliche Daten", code: "7", grid: true, qs: [
-        { id: "vorname", type: "text", code: "7.1", label: "Vorname", req: true, ac: "given-name" },
-        { id: "nachname", type: "text", code: "7.2", label: "Nachname", req: true, ac: "family-name" },
-        { id: "geburt", type: "date", code: "7.3", label: "Geburtsdatum", req: true, ac: "bday" },
-        { id: "geburtsort", type: "text", code: "7.4", label: "Geburtsort", req: true },
-        { id: "staat", type: "text", code: "7.5", label: "Staatsangehörigkeit", req: true, ph: "z. B. deutsch" },
-        { id: "familienstand", type: "select", code: "7.6", label: "Familienstand", req: true, options: [["ledig", "ledig"], ["verheiratet", "verheiratet"], ["partnerschaft", "eingetragene Lebenspartnerschaft"], ["getrennt", "getrennt lebend"], ["geschieden", "geschieden"], ["verwitwet", "verwitwet"]] },
-        { id: "strasse", type: "text", code: "7.7", label: "Straße", req: true, ac: "address-line1" },
-        { id: "hausnr", type: "text", code: "7.8", label: "Hausnummer", req: true },
-        { id: "plz", type: "text", code: "7.9", label: "PLZ", req: true, inputmode: "numeric", ac: "postal-code" },
-        { id: "ort", type: "text", code: "7.10", label: "Wohnort", req: true, ac: "address-level2" },
-        { id: "handy", type: "tel", code: "7.11", label: "Handynummer", req: true, ac: "tel" },
-        { id: "email", type: "email", code: "7.12", label: "E-Mail", req: true, ac: "email" },
-        { id: "svnr", type: "text", code: "7.13", label: "Sozialversicherungsnummer", req: true, ph: "z. B. 12 150896 M 123", hint: "Steht auf dem Sozialversicherungsausweis, dem Brief der Rentenversicherung oder der Lohnabrechnung.", span: true, show: isIn("situation", BESCHAEFTIGT) },
-        { id: "kdnr", type: "text", code: "7.14", label: "Kundennummer bei der Agentur für Arbeit", hint: "Falls vorhanden, z. B. aus einer früheren Arbeitslosmeldung.", span: true },
-        { id: "iban", type: "text", code: "7.15", label: "IBAN deines Kontos", ph: "DE…", hint: "Freiwillig. Nur nötig, wenn dir die Agentur Fahrkosten erstatten soll.", span: true, ac: "off" },
-        { id: "arbeitserlaubnis", type: "radio", code: "7.16", label: "Brauchst du eine Arbeitserlaubnis?", req: true, stack: true, span: true, options: [["nein", "Nein (deutsche oder EU-Staatsangehörigkeit)"], ["unbefristet", "Ja, unbefristet"], ["befristet", "Ja, befristet"]] },
-        { id: "arbeitserlaubnis_bis", type: "date", code: "7.17", label: "Arbeitserlaubnis befristet bis", req: true, show: isIn("arbeitserlaubnis", ["befristet"]) },
-        { id: "gdb", type: "radio", code: "7.18", label: "Schwerbehinderung (GdB ab 50) oder Gleichstellung?", hint: "Freiwillige Angabe.", span: true, options: [["nein", "Nein"], ["ja", "Ja"], ["ka", "Keine Angabe"]] },
+      { title: "Persönliche Daten", code: "10", grid: true, qs: [
+        { id: "vorname", type: "text", code: "10.1", label: "Vorname", req: true, ac: "given-name" },
+        { id: "nachname", type: "text", code: "10.2", label: "Nachname", req: true, ac: "family-name" },
+        { id: "geburt", type: "date", code: "10.3", label: "Geburtsdatum", req: true, ac: "bday" },
+        { id: "geburtsort", type: "text", code: "10.4", label: "Geburtsort", req: true },
+        { id: "staat", type: "text", code: "10.5", label: "Staatsangehörigkeit", req: true, ph: "z. B. deutsch" },
+        { id: "familienstand", type: "select", code: "10.6", label: "Familienstand", req: true, options: [["ledig", "ledig"], ["verheiratet", "verheiratet"], ["partnerschaft", "eingetragene Lebenspartnerschaft"], ["getrennt", "getrennt lebend"], ["geschieden", "geschieden"], ["verwitwet", "verwitwet"]] },
+        { id: "strasse", type: "text", code: "10.7", label: "Straße", req: true, ac: "address-line1" },
+        { id: "hausnr", type: "text", code: "10.8", label: "Hausnummer", req: true },
+        { id: "plz", type: "text", code: "10.9", label: "PLZ", req: true, inputmode: "numeric", ac: "postal-code" },
+        { id: "ort", type: "text", code: "10.10", label: "Wohnort", req: true, ac: "address-level2" },
+        { id: "handy", type: "tel", code: "10.11", label: "Handynummer", req: true, ac: "tel" },
+        { id: "email", type: "email", code: "10.12", label: "E-Mail", req: true, ac: "email" },
+        { id: "svnr", type: "text", code: "10.13", label: "Sozialversicherungsnummer", req: true, ph: "z. B. 12 150896 M 123", hint: "Steht auf dem Sozialversicherungsausweis, dem Brief der Rentenversicherung oder der Lohnabrechnung.", span: true, show: isIn("situation", BESCHAEFTIGT) },
+        { id: "kdnr", type: "text", code: "10.14", label: "Kundennummer bei der Agentur für Arbeit", hint: "Falls vorhanden, z. B. aus einer früheren Arbeitslosmeldung.", span: true },
+        { id: "iban", type: "text", code: "10.15", label: "IBAN deines Kontos", ph: "DE…", hint: "Freiwillig. Nur nötig, wenn dir die Agentur Fahrkosten erstatten soll.", span: true, ac: "off" },
+        { id: "arbeitserlaubnis", type: "radio", code: "10.16", label: "Brauchst du eine Arbeitserlaubnis?", req: true, stack: true, span: true, options: [["nein", "Nein (deutsche oder EU-Staatsangehörigkeit)"], ["unbefristet", "Ja, unbefristet"], ["befristet", "Ja, befristet"]] },
+        { id: "arbeitserlaubnis_bis", type: "date", code: "10.17", label: "Arbeitserlaubnis befristet bis", req: true, show: isIn("arbeitserlaubnis", ["befristet"]) },
+        { id: "gdb", type: "radio", code: "10.18", label: "Schwerbehinderung (GdB ab 50) oder Gleichstellung?", hint: "Freiwillige Angabe.", span: true, options: [["nein", "Nein"], ["ja", "Ja"], ["ka", "Keine Angabe"]] },
       ] },
-      { title: "Werdegang", code: "8", qs: [
-        { id: "stationen", type: "textarea", code: "8.1", label: "Deine Stationen seit der Schule", req: true, ph: "z. B.\n08/2017–06/2020 Ausbildung Friseur, Salon …\n07/2020–heute Friseur-Geselle, Salon …" },
-        { id: "luecken", type: "textarea", code: "8.2", label: "Zeiten ohne Job – warst du arbeitslos gemeldet?", ph: "z. B. 03/2022–06/2022 arbeitslos gemeldet (Agentur Leipzig)", rows: 3 },
-        { id: "zertifikate", type: "textarea", code: "8.3", label: "Weitere Abschlüsse, Kurse, Zertifikate", rows: 3 },
-        { id: "ausb_von", type: "date", code: "8.4", label: "Beginn der Ausbildung", req: true, show: isIn("ausbildung", ["ja", "abgebrochen", "laufend"]) },
-        { id: "zeugnis", type: "date", code: "8.5", label: "Datum des Abschlusszeugnisses (Gesellenbrief)", req: true, show: isIn("ausbildung", ["ja"]) },
-        { id: "erlernt", type: "radio", code: "8.6", label: "Arbeitest du heute in deinem erlernten Beruf?", req: true, stack: true, options: [["ja", "Ja"], ["nein", "Nein, in einer an- oder ungelernten Tätigkeit"]], show: (f) => f.ausbildung === "ja" && BESCHAEFTIGT.includes(f.situation) },
-        { id: "ungelernt_seit", type: "date", code: "8.7", label: "Seit wann arbeitest du an- oder ungelernt?", show: (f) => f.erlernt === "nein" && f.ausbildung === "ja" && BESCHAEFTIGT.includes(f.situation) },
-        { id: "frueher", type: "radio", code: "8.8", label: "Hattest du schon einmal eine geförderte Weiterbildung?", stack: true, options: [["nein", "Nein"], ["bgs", "Ja, mit Bildungsgutschein"], ["qcg", "Ja, als Beschäftigter (Qualifizierungschancengesetz)"]] },
-        { id: "frueher_text", type: "text", code: "8.9", label: "Welche und wann?", ph: "z. B. 2023, Excel-Kurs, 3 Monate", show: isIn("frueher", ["bgs", "qcg"]) },
-        { id: "reha", type: "radio", code: "8.10", label: "Läuft ein Antrag bei der Rentenversicherung, der Berufsgenossenschaft oder einer anderen Stelle, z. B. auf Reha oder Umschulung?", options: [["nein", "Nein"], ["ja", "Ja"]] },
-        { id: "reha_text", type: "text", code: "8.11", label: "Welche Stelle, welches Aktenzeichen?", show: isIn("reha", ["ja"]) },
+      { title: "Werdegang", code: "11", qs: [
+        { id: "stationen", type: "textarea", code: "11.1", label: "Deine Stationen seit der Schule", req: true, ph: "z. B.\n08/2017–06/2020 Ausbildung Friseur, Salon …\n07/2020–heute Friseur-Geselle, Salon …" },
+        { id: "luecken", type: "textarea", code: "11.2", label: "Zeiten ohne Job – warst du arbeitslos gemeldet?", ph: "z. B. 03/2022–06/2022 arbeitslos gemeldet (Agentur Leipzig)", rows: 3 },
+        { id: "zertifikate", type: "textarea", code: "11.3", label: "Weitere Abschlüsse, Kurse, Zertifikate", rows: 3 },
+        { id: "ausb_von", type: "date", code: "11.4", label: "Beginn der Ausbildung", req: true, show: isIn("ausbildung", ["ja", "abgebrochen", "laufend"]) },
+        { id: "zeugnis", type: "date", code: "11.5", label: "Datum des Abschlusszeugnisses (Gesellenbrief)", req: true, show: isIn("ausbildung", ["ja"]) },
+        { id: "erlernt", type: "radio", code: "11.6", label: "Arbeitest du heute in deinem erlernten Beruf?", req: true, stack: true, options: [["ja", "Ja"], ["nein", "Nein, in einer an- oder ungelernten Tätigkeit"]], show: (f) => f.ausbildung === "ja" && BESCHAEFTIGT.includes(f.situation) },
+        { id: "ungelernt_seit", type: "date", code: "11.7", label: "Seit wann arbeitest du an- oder ungelernt?", show: (f) => f.erlernt === "nein" && f.ausbildung === "ja" && BESCHAEFTIGT.includes(f.situation) },
+        { id: "frueher", type: "radio", code: "11.8", label: "Hattest du schon einmal eine geförderte Weiterbildung?", stack: true, options: [["nein", "Nein"], ["bgs", "Ja, mit Bildungsgutschein"], ["qcg", "Ja, als Beschäftigter (Qualifizierungschancengesetz)"]] },
+        { id: "frueher_text", type: "text", code: "11.9", label: "Welche und wann?", ph: "z. B. 2023, Excel-Kurs, 3 Monate", show: isIn("frueher", ["bgs", "qcg"]) },
+        { id: "reha", type: "radio", code: "11.10", label: "Läuft ein Antrag bei der Rentenversicherung, der Berufsgenossenschaft oder einer anderen Stelle, z. B. auf Reha oder Umschulung?", options: [["nein", "Nein"], ["ja", "Ja"]] },
+        { id: "reha_text", type: "text", code: "11.11", label: "Welche Stelle, welches Aktenzeichen?", show: isIn("reha", ["ja"]) },
       ] },
-      { title: "Aktuelle Stelle", code: "9", grid: true, show: isIn("situation", BESCHAEFTIGT), qs: [
-        { id: "ag_name", type: "text", code: "9.1", label: "Arbeitgeber", req: true, span: true },
-        { id: "seit", type: "date", code: "9.2", label: "Beschäftigt seit", req: true },
-        { id: "taetigkeit", type: "text", code: "9.3", label: "Tätigkeit", ph: "z. B. Friseur-Geselle", req: true },
-        { id: "befristung", type: "radio", code: "9.4", label: "Vertrag", req: true, options: [["unbefristet", "Unbefristet"], ["befristet", "Befristet"]], span: true },
-        { id: "befristet_bis", type: "date", code: "9.5", label: "Befristet bis", show: isIn("befristung", ["befristet"]) },
-        { id: "stunden", type: "number", code: "9.6", label: "Wochenstunden laut Vertrag", req: true, min: 1, max: 60, inputmode: "decimal" },
-        { id: "arbeitszeiten", type: "text", code: "9.7", label: "Arbeitszeiten laut Vertrag", ph: "z. B. Di–Fr 9–18 Uhr, Sa 9–14 Uhr", hint: "Pro Wochentag mit Uhrzeit. Der Zuschuss gilt nur für Kursstunden während deiner Arbeitszeit." },
-        { id: "brutto", type: "number", code: "9.8", label: "Bruttogehalt pro Monat (€)", req: true, min: 0, inputmode: "decimal" },
-        { id: "gehalt_extra", type: "text", code: "9.9", label: "Weitere feste Gehaltsbestandteile", ph: "z. B. Umsatzbeteiligung, Zulagen" },
-        { id: "vertrag", type: "radio", code: "9.10", label: "Gibt es einen schriftlichen Arbeitsvertrag?", options: [["ja", "Ja"], ["nein", "Nein"]], span: true },
-        { id: "verwandt", type: "radio", code: "9.11", label: "Bist du mit der Inhaberin oder dem Inhaber verwandt?", req: true, stack: true, span: true, options: [["nein", "Nein"], ["eltern", "Ja – Eltern bzw. Kind"], ["partner", "Ja – Ehe- oder Lebenspartner/in"], ["andere", "Ja – andere Verwandte"]] },
-        { id: "statusbescheid", type: "radio", code: "9.12", label: "Gibt es einen Bescheid der Rentenversicherung zur Statusfeststellung?", hint: "Bei Kindern des Arbeitgebers wird der Status bei der Anmeldung automatisch geprüft. Den Bescheid bitte heraussuchen.", span: true, options: [["ja", "Ja"], ["nein", "Nein"], ["unklar", "Weiß nicht"]], show: (f) => has(f.verwandt) && f.verwandt !== "nein" },
-        { id: "konto", type: "radio", code: "9.13", label: "Wird dein Gehalt jeden Monat auf dein eigenes Konto überwiesen?", span: true, options: [["ja", "Ja"], ["nein", "Nein"]], show: (f) => has(f.verwandt) && f.verwandt !== "nein" },
-        { id: "freistellung", type: "radio", code: "9.14", label: "Würde dein Arbeitgeber dich für die Weiterbildung freistellen?", req: true, stack: true, span: true, hint: "Du bleibst angestellt und bekommst weiter Gehalt. Der Betrieb bekommt dafür einen Zuschuss.", options: [["ja", "Ja, ist besprochen"], ["offen", "Noch nicht besprochen"], ["nein", "Nein"]] },
-        { id: "grundsicherung", type: "radio", code: "9.15", label: "Bekommst du zusätzlich Grundsicherungsgeld (früher Bürgergeld)?", span: true, options: [["nein", "Nein"], ["ja", "Ja"]] },
-        { id: "entgelt_aenderung", type: "radio", code: "9.16", label: "Ändert sich dein Gehalt während der Weiterbildung, z. B. durch eine Erhöhung?", span: true, options: [["nein", "Nein"], ["ja", "Ja"], ["unklar", "Weiß nicht"]] },
-        { id: "entgelt_aenderung_text", type: "text", code: "9.17", label: "Was ändert sich ab wann?", ph: "z. B. ab 01.01.2027 Grundgehalt 2.350 €", span: true, show: isIn("entgelt_aenderung", ["ja"]) },
-        { id: "km_arbeit", type: "number", code: "9.18", label: "Entfernung Wohnung – Arbeit (km, einfache Strecke)", min: 0, max: 500, inputmode: "decimal" },
-        { id: "zusatzkosten", type: "radio", code: "9.19", label: "Entstehen dir durch die Weiterbildung zusätzliche Kosten?", hint: "Zum Beispiel Fahrten zum Kursort oder Kinderbetreuung. Die Agentur kann sie erstatten.", stack: true, span: true, options: [["nein", "Nein"], ["fahrt", "Ja, Fahrkosten"], ["kinder", "Ja, Kinderbetreuung"], ["beides", "Ja, beides"]] },
-        { id: "zusatzkosten_text", type: "textarea", code: "9.20", label: "Welche Kosten?", rows: 2, ph: "z. B. 25 km zum Kursort an 2 Tagen pro Woche; Kind (geb. 03/2021) braucht Betreuung", show: (f) => has(f.zusatzkosten) && f.zusatzkosten !== "nein" },
+      { title: "Aktuelle Stelle", code: "12", grid: true, show: isIn("situation", BESCHAEFTIGT), qs: [
+        { id: "ag_name", type: "text", code: "12.1", label: "Arbeitgeber", req: true, span: true },
+        { id: "seit", type: "date", code: "12.2", label: "Beschäftigt seit", req: true },
+        { id: "taetigkeit", type: "text", code: "12.3", label: "Tätigkeit", ph: "z. B. Friseur-Geselle", req: true },
+        { id: "befristung", type: "radio", code: "12.4", label: "Vertrag", req: true, options: [["unbefristet", "Unbefristet"], ["befristet", "Befristet"]], span: true },
+        { id: "befristet_bis", type: "date", code: "12.5", label: "Befristet bis", show: isIn("befristung", ["befristet"]) },
+        { id: "stunden", type: "number", code: "12.6", label: "Wochenstunden laut Vertrag", req: true, min: 1, max: 60, inputmode: "decimal" },
+        { id: "arbeitszeiten", type: "text", code: "12.7", label: "Arbeitszeiten laut Vertrag", ph: "z. B. Di–Fr 9–18 Uhr, Sa 9–14 Uhr", hint: "Pro Wochentag mit Uhrzeit. Der Zuschuss gilt nur für Kursstunden während deiner Arbeitszeit." },
+        { id: "brutto", type: "number", code: "12.8", label: "Bruttogehalt pro Monat (€)", req: true, min: 0, inputmode: "decimal" },
+        { id: "gehalt_extra", type: "text", code: "12.9", label: "Weitere feste Gehaltsbestandteile", ph: "z. B. Umsatzbeteiligung, Zulagen" },
+        { id: "vertrag", type: "radio", code: "12.10", label: "Gibt es einen schriftlichen Arbeitsvertrag?", options: [["ja", "Ja"], ["nein", "Nein"]], span: true },
+        { id: "verwandt", type: "radio", code: "12.11", label: "Bist du mit der Inhaberin oder dem Inhaber verwandt?", req: true, stack: true, span: true, options: [["nein", "Nein"], ["eltern", "Ja – Eltern bzw. Kind"], ["partner", "Ja – Ehe- oder Lebenspartner/in"], ["andere", "Ja – andere Verwandte"]] },
+        { id: "statusbescheid", type: "radio", code: "12.12", label: "Gibt es einen Bescheid der Rentenversicherung zur Statusfeststellung?", hint: "Bei Kindern des Arbeitgebers wird der Status bei der Anmeldung automatisch geprüft. Den Bescheid bitte heraussuchen.", span: true, options: [["ja", "Ja"], ["nein", "Nein"], ["unklar", "Weiß nicht"]], show: (f) => has(f.verwandt) && f.verwandt !== "nein" },
+        { id: "konto", type: "radio", code: "12.13", label: "Wird dein Gehalt jeden Monat auf dein eigenes Konto überwiesen?", span: true, options: [["ja", "Ja"], ["nein", "Nein"]], show: (f) => has(f.verwandt) && f.verwandt !== "nein" },
+        { id: "freistellung", type: "radio", code: "12.14", label: "Würde dein Arbeitgeber dich für die Weiterbildung freistellen?", req: true, stack: true, span: true, hint: "Du bleibst angestellt und bekommst weiter Gehalt. Der Betrieb bekommt dafür einen Zuschuss.", options: [["ja", "Ja, ist besprochen"], ["offen", "Noch nicht besprochen"], ["nein", "Nein"]] },
+        { id: "grundsicherung", type: "radio", code: "12.15", label: "Bekommst du zusätzlich Grundsicherungsgeld (früher Bürgergeld)?", span: true, options: [["nein", "Nein"], ["ja", "Ja"]] },
+        { id: "entgelt_aenderung", type: "radio", code: "12.16", label: "Ändert sich dein Gehalt während der Weiterbildung, z. B. durch eine Erhöhung?", span: true, options: [["nein", "Nein"], ["ja", "Ja"], ["unklar", "Weiß nicht"]] },
+        { id: "entgelt_aenderung_text", type: "text", code: "12.17", label: "Was ändert sich ab wann?", ph: "z. B. ab 01.01.2027 Grundgehalt 2.350 €", span: true, show: isIn("entgelt_aenderung", ["ja"]) },
+        { id: "km_arbeit", type: "number", code: "12.18", label: "Entfernung Wohnung – Arbeit (km, einfache Strecke)", min: 0, max: 500, inputmode: "decimal" },
+        { id: "zusatzkosten", type: "radio", code: "12.19", label: "Entstehen dir durch die Weiterbildung zusätzliche Kosten?", hint: "Zum Beispiel Fahrten zum Kursort oder Kinderbetreuung. Die Agentur kann sie erstatten.", stack: true, span: true, options: [["nein", "Nein"], ["fahrt", "Ja, Fahrkosten"], ["kinder", "Ja, Kinderbetreuung"], ["beides", "Ja, beides"]] },
+        { id: "zusatzkosten_text", type: "textarea", code: "12.20", label: "Welche Kosten?", rows: 2, ph: "z. B. 25 km zum Kursort an 2 Tagen pro Woche; Kind (geb. 03/2021) braucht Betreuung", show: (f) => has(f.zusatzkosten) && f.zusatzkosten !== "nein" },
       ] },
     ],
   },
   {
-    key: "betrieb", nav: "Betrieb", eyebrow: "Schritt 6 von 7",
+    key: "betrieb", nav: "Betrieb", eyebrow: "Schritt 7 von 8",
     title: "Angaben zum Betrieb",
     lead: "Am besten zusammen mit deinem Arbeitgeber ausfüllen. Der Betrieb stellt den Antrag auf den Lohnzuschuss.",
     blocks: [
-      { title: "Betrieb", code: "10", grid: true, show: isIn("situation", BESCHAEFTIGT), qs: [
-        { id: "fa_name", type: "text", code: "10.1", label: "Name des Betriebs (wie in der Gewerbeanmeldung)", req: true, span: true },
-        { id: "fa_form", type: "select", code: "10.2", label: "Rechtsform", options: [["einzel", "Einzelunternehmen"], ["gbr", "GbR"], ["ohg", "OHG / KG"], ["gmbh", "GmbH"], ["ug", "UG (haftungsbeschränkt)"], ["sonst", "Andere"]] },
-        { id: "fa_branche", type: "text", code: "10.3", label: "Branche / Geschäftsfeld", ph: "z. B. Friseursalon" },
-        { id: "fa_strasse", type: "text", code: "10.4", label: "Straße des Betriebs", req: true },
-        { id: "fa_hausnr", type: "text", code: "10.5", label: "Hausnummer des Betriebs", req: true },
-        { id: "fa_plz", type: "text", code: "10.6", label: "PLZ des Betriebs", req: true, inputmode: "numeric" },
-        { id: "fa_ort", type: "text", code: "10.7", label: "Ort des Betriebs", req: true },
-        { id: "fa_bnr", type: "text", code: "10.8", label: "Betriebsnummer", req: true, inputmode: "numeric", hint: "8 Ziffern. Steht auf jeder Lohnabrechnung und SV-Meldung, sonst beim Steuerbüro erfragen.", span: true },
-        { id: "fa_inhaber", type: "text", code: "10.9", label: "Inhaber/in bzw. Geschäftsführung", span: true },
-        { id: "fa_ap_vorname", type: "text", code: "10.10", label: "Ansprechperson: Vorname", req: true },
-        { id: "fa_ap_nachname", type: "text", code: "10.11", label: "Ansprechperson: Nachname", req: true },
-        { id: "fa_tel", type: "tel", code: "10.12", label: "Telefon Ansprechperson", req: true },
-        { id: "fa_mail", type: "email", code: "10.13", label: "E-Mail Ansprechperson" },
-        { id: "fa_kdnr", type: "text", code: "10.14", label: "Kundennummer des Betriebs bei der Agentur", hint: "Falls vorhanden." },
-        { id: "fa_iban", type: "text", code: "10.15", label: "IBAN des Geschäftskontos", ph: "DE…", hint: "Dorthin zahlt die Agentur den Zuschuss zum Gehalt. Kann auch erst im Antrag eingetragen werden.", span: true, ac: "off" },
+      { title: "Betrieb", code: "13", grid: true, show: isIn("situation", BESCHAEFTIGT), qs: [
+        { id: "fa_name", type: "text", code: "13.1", label: "Name des Betriebs (wie in der Gewerbeanmeldung)", req: true, span: true },
+        { id: "fa_form", type: "select", code: "13.2", label: "Rechtsform", options: [["einzel", "Einzelunternehmen"], ["gbr", "GbR"], ["ohg", "OHG / KG"], ["gmbh", "GmbH"], ["ug", "UG (haftungsbeschränkt)"], ["sonst", "Andere"]] },
+        { id: "fa_branche", type: "text", code: "13.3", label: "Branche / Geschäftsfeld", ph: "z. B. Friseursalon" },
+        { id: "fa_strasse", type: "text", code: "13.4", label: "Straße des Betriebs", req: true },
+        { id: "fa_hausnr", type: "text", code: "13.5", label: "Hausnummer des Betriebs", req: true },
+        { id: "fa_plz", type: "text", code: "13.6", label: "PLZ des Betriebs", req: true, inputmode: "numeric" },
+        { id: "fa_ort", type: "text", code: "13.7", label: "Ort des Betriebs", req: true },
+        { id: "fa_bnr", type: "text", code: "13.8", label: "Betriebsnummer", req: true, inputmode: "numeric", hint: "8 Ziffern. Steht auf jeder Lohnabrechnung und SV-Meldung, sonst beim Steuerbüro erfragen.", span: true },
+        { id: "fa_inhaber", type: "text", code: "13.9", label: "Inhaber/in bzw. Geschäftsführung", span: true },
+        { id: "fa_ap_vorname", type: "text", code: "13.10", label: "Ansprechperson: Vorname", req: true },
+        { id: "fa_ap_nachname", type: "text", code: "13.11", label: "Ansprechperson: Nachname", req: true },
+        { id: "fa_tel", type: "tel", code: "13.12", label: "Telefon Ansprechperson", req: true },
+        { id: "fa_mail", type: "email", code: "13.13", label: "E-Mail Ansprechperson" },
+        { id: "fa_kdnr", type: "text", code: "13.14", label: "Kundennummer des Betriebs bei der Agentur", hint: "Falls vorhanden." },
+        { id: "fa_iban", type: "text", code: "13.15", label: "IBAN des Geschäftskontos", ph: "DE…", hint: "Dorthin zahlt die Agentur den Zuschuss zum Gehalt. Kann auch erst im Antrag eingetragen werden.", span: true, ac: "off" },
       ] },
-      { title: "Beschäftigte im Betrieb", code: "11", grid: true, show: isIn("situation", BESCHAEFTIGT), note: "Davon hängt die Förderhöhe ab. Inhaber, Azubis und Minijobs zählen nicht mit, Teilzeit zählt anteilig. Dich selbst mitzählen.", qs: [
-        { id: "fa_vz", type: "number", code: "11.1", label: "Vollzeit (über 30 Std./Woche)", req: true, min: 0, inputmode: "numeric" },
-        { id: "fa_tz30", type: "number", code: "11.2", label: "Teilzeit 21–30 Std.", min: 0, inputmode: "numeric" },
-        { id: "fa_tz20", type: "number", code: "11.3", label: "Teilzeit 11–20 Std.", min: 0, inputmode: "numeric" },
-        { id: "fa_tz10", type: "number", code: "11.4", label: "Teilzeit bis 10 Std.", min: 0, inputmode: "numeric" },
-        { id: "fa_mini", type: "number", code: "11.5", label: "Minijobs", min: 0, inputmode: "numeric" },
-        { id: "fa_azubi", type: "number", code: "11.6", label: "Azubis", min: 0, inputmode: "numeric" },
+      { title: "Beschäftigte im Betrieb", code: "14", grid: true, show: isIn("situation", BESCHAEFTIGT), note: "Davon hängt die Förderhöhe ab. Inhaber, Azubis und Minijobs zählen nicht mit, Teilzeit zählt anteilig. Dich selbst mitzählen.", qs: [
+        { id: "fa_vz", type: "number", code: "14.1", label: "Vollzeit (über 30 Std./Woche)", req: true, min: 0, inputmode: "numeric" },
+        { id: "fa_tz30", type: "number", code: "14.2", label: "Teilzeit 21–30 Std.", min: 0, inputmode: "numeric" },
+        { id: "fa_tz20", type: "number", code: "14.3", label: "Teilzeit 11–20 Std.", min: 0, inputmode: "numeric" },
+        { id: "fa_tz10", type: "number", code: "14.4", label: "Teilzeit bis 10 Std.", min: 0, inputmode: "numeric" },
+        { id: "fa_mini", type: "number", code: "14.5", label: "Minijobs", min: 0, inputmode: "numeric" },
+        { id: "fa_azubi", type: "number", code: "14.6", label: "Azubis", min: 0, inputmode: "numeric" },
       ] },
-      { title: "Gehalt & Förderung", code: "12", show: isIn("situation", BESCHAEFTIGT), qs: [
-        { id: "fa_gehalt", type: "radio", code: "12.1", label: "Wie ist dein Gehalt festgelegt?", hint: "Der Zuschuss richtet sich höchstens nach dem tariflichen oder ortsüblichen Gehalt.", options: [["tarif", "Nach Tarifvertrag"], ["ortsueblich", "Ortsüblich"], ["frei", "Frei vereinbart"], ["unklar", "Weiß nicht"]] },
-        { id: "fa_tarif", type: "radio", code: "12.2", label: "Gilt ein Tarifvertrag oder eine Betriebsvereinbarung zur Weiterbildung?", hint: "Wenn ja, gibt es 5 Prozentpunkte mehr Zuschuss.", options: [["nein", "Nein"], ["ja", "Ja"], ["unklar", "Weiß nicht"]] },
-        { id: "fa_zuschuss", type: "radio", code: "12.3", label: "Bekommt der Betrieb für dich gerade Kurzarbeitergeld oder einen Eingliederungszuschuss?", options: [["nein", "Nein"], ["kug", "Kurzarbeitergeld"], ["egz", "Eingliederungszuschuss"], ["unklar", "Weiß nicht"]] },
-        { id: "fa_ags", type: "radio", code: "12.4", label: "Hatte der Betrieb schon Kontakt zum Arbeitgeber-Service der Agentur für Arbeit?", options: [["nein", "Nein"], ["ja", "Ja"]] },
-        { id: "fa_lohn", type: "radio", code: "12.5", label: "Wer macht die Lohnabrechnung?", options: [["selbst", "Der Betrieb selbst"], ["buero", "Steuer- oder Lohnbüro"]] },
-        { id: "fa_anderer", type: "radio", code: "12.6", label: "Bekommt der Betrieb für dich von einer anderen Stelle einen Zuschuss zum Gehalt?", options: [["nein", "Nein"], ["ja", "Ja"]] },
-        { id: "fa_anderer_text", type: "text", code: "12.7", label: "Von welcher Stelle?", show: isIn("fa_anderer", ["ja"]) },
-        { id: "fa_pflicht", type: "radio", code: "12.8", label: "Ist der Betrieb gesetzlich verpflichtet, dich so weiterzubilden?", hint: "Fast immer Nein. Vorgeschriebene Pflichtschulungen werden nicht gefördert.", options: [["nein", "Nein"], ["ja", "Ja"]] },
-        { id: "fa_kosten", type: "radio", code: "12.9", label: "Zahlt der Betrieb oder jemand anderes einen Teil der Kurskosten?", options: [["nein", "Nein"], ["ja", "Ja"]] },
+      { title: "Gehalt & Förderung", code: "15", show: isIn("situation", BESCHAEFTIGT), qs: [
+        { id: "fa_gehalt", type: "radio", code: "15.1", label: "Wie ist dein Gehalt festgelegt?", hint: "Der Zuschuss richtet sich höchstens nach dem tariflichen oder ortsüblichen Gehalt.", options: [["tarif", "Nach Tarifvertrag"], ["ortsueblich", "Ortsüblich"], ["frei", "Frei vereinbart"], ["unklar", "Weiß nicht"]] },
+        { id: "fa_tarif", type: "radio", code: "15.2", label: "Gilt ein Tarifvertrag oder eine Betriebsvereinbarung zur Weiterbildung?", hint: "Wenn ja, gibt es 5 Prozentpunkte mehr Zuschuss.", options: [["nein", "Nein"], ["ja", "Ja"], ["unklar", "Weiß nicht"]] },
+        { id: "fa_zuschuss", type: "radio", code: "15.3", label: "Bekommt der Betrieb für dich gerade Kurzarbeitergeld oder einen Eingliederungszuschuss?", options: [["nein", "Nein"], ["kug", "Kurzarbeitergeld"], ["egz", "Eingliederungszuschuss"], ["unklar", "Weiß nicht"]] },
+        { id: "fa_ags", type: "radio", code: "15.4", label: "Hatte der Betrieb schon Kontakt zum Arbeitgeber-Service der Agentur für Arbeit?", options: [["nein", "Nein"], ["ja", "Ja"]] },
+        { id: "fa_lohn", type: "radio", code: "15.5", label: "Wer macht die Lohnabrechnung?", options: [["selbst", "Der Betrieb selbst"], ["buero", "Steuer- oder Lohnbüro"]] },
+        { id: "fa_anderer", type: "radio", code: "15.6", label: "Bekommt der Betrieb für dich von einer anderen Stelle einen Zuschuss zum Gehalt?", options: [["nein", "Nein"], ["ja", "Ja"]] },
+        { id: "fa_anderer_text", type: "text", code: "15.7", label: "Von welcher Stelle?", show: isIn("fa_anderer", ["ja"]) },
+        { id: "fa_pflicht", type: "radio", code: "15.8", label: "Ist der Betrieb gesetzlich verpflichtet, dich so weiterzubilden?", hint: "Fast immer Nein. Vorgeschriebene Pflichtschulungen werden nicht gefördert.", options: [["nein", "Nein"], ["ja", "Ja"]] },
+        { id: "fa_kosten", type: "radio", code: "15.9", label: "Zahlt der Betrieb oder jemand anderes einen Teil der Kurskosten?", options: [["nein", "Nein"], ["ja", "Ja"]] },
       ] },
     ],
     emptyNote: "Du hast angegeben, dass du gerade nicht angestellt bist. Dann brauchen wir keine Angaben zum Betrieb – die Förderung läuft über einen Bildungsgutschein.",
   },
   {
-    key: "senden", nav: "Abschicken", eyebrow: "Schritt 7 von 7",
+    key: "senden", nav: "Abschicken", eyebrow: "Schritt 8 von 8",
     title: "Begründung, Unterlagen & Abschicken",
     lead: "",
     blocks: [
-      { title: "Warum diese Weiterbildung?", code: "13", note: "Die Agentur prüft, ob die Weiterbildung deine Chancen auf dem Arbeitsmarkt klar verbessert. Schreib ehrlich und in deinen eigenen Worten – Stichpunkte reichen. Daraus formulieren wir die Begründung.", qs: [
-        { id: "warum", type: "textarea", code: "13.1", label: "Warum möchtest du dich beruflich verändern?", req: true, rows: 4, ph: "Deine persönlichen Gründe" },
-        { id: "wandel", type: "textarea", code: "13.2", label: "Wie sieht deine Perspektive im jetzigen Beruf aus?", rows: 3, ph: "z. B. Verdienst, Entwicklung, Belastung, Veränderungen in der Branche" },
-        { id: "koennen", type: "textarea", code: "13.3", label: "Was kannst du schon, das dir im neuen Bereich hilft?", req: true, rows: 3, ph: "z. B. PCs selbst gebaut, Netzwerk zu Hause eingerichtet, Kundenkontakt, Englisch" },
-        { id: "ziel", type: "textarea", code: "13.4", label: "Welchen Job willst du danach machen?", req: true, rows: 3, ph: "z. B. IT-Support in einem Systemhaus, später IT-Sicherheit, gern remote" },
-        { id: "nutzen", type: "textarea", code: "13.5", label: "Kannst du das Gelernte auch im jetzigen Betrieb einsetzen?", rows: 2, ph: "z. B. Online-Buchung, Website, IT und Datenschutz im Betrieb" },
-        { id: "gesundheit", type: "radio", code: "13.6", label: "Spielen gesundheitliche Gründe eine Rolle?", hint: "Nur Ja oder Nein, Details besprechen wir persönlich. Dafür gibt es teils eigene Förderwege.", options: [["nein", "Nein"], ["ja", "Ja"], ["ka", "Keine Angabe"]] },
+      { title: "Warum diese Weiterbildung?", code: "16", note: "Die Agentur prüft, ob die Weiterbildung deine Chancen auf dem Arbeitsmarkt klar verbessert. Schreib ehrlich und in deinen eigenen Worten – Stichpunkte reichen. Daraus formulieren wir die Begründung.", qs: [
+        { id: "warum", type: "textarea", code: "16.1", label: "Warum möchtest du dich beruflich verändern?", req: true, rows: 4, ph: "Deine persönlichen Gründe" },
+        { id: "wandel", type: "textarea", code: "16.2", label: "Wie sieht deine Perspektive im jetzigen Beruf aus?", rows: 3, ph: "z. B. Verdienst, Entwicklung, Belastung, Veränderungen in der Branche" },
+        { id: "koennen", type: "textarea", code: "16.3", label: "Was kannst du schon, das dir im neuen Bereich hilft?", req: true, rows: 3, ph: "z. B. PCs selbst gebaut, Netzwerk zu Hause eingerichtet, Kundenkontakt, Englisch" },
+        { id: "ziel", type: "textarea", code: "16.4", label: "Welchen Job willst du danach machen?", req: true, rows: 3, ph: "z. B. IT-Support in einem Systemhaus, später IT-Sicherheit, gern remote" },
+        { id: "nutzen", type: "textarea", code: "16.5", label: "Kannst du das Gelernte auch im jetzigen Betrieb einsetzen?", rows: 2, ph: "z. B. Online-Buchung, Website, IT und Datenschutz im Betrieb" },
+        { id: "gesundheit", type: "radio", code: "16.6", label: "Spielen gesundheitliche Gründe eine Rolle?", hint: "Nur Ja oder Nein, Details besprechen wir persönlich. Dafür gibt es teils eigene Förderwege.", options: [["nein", "Nein"], ["ja", "Ja"], ["ka", "Keine Angabe"]] },
       ] },
-      { title: "Unterlagen", code: "14", note: "Die Unterlagen schickst du später als Foto oder PDF. Hier nur ankreuzen, was du schon hast.", qs: [
-        { id: "docs", type: "docs", code: "14.1", label: "Was liegt schon vor?", groups: DOCS },
+      { title: "Unterlagen", code: "17", note: "Die Unterlagen schickst du später als Foto oder PDF. Hier nur ankreuzen, was du schon hast.", qs: [
+        { id: "docs", type: "docs", code: "17.1", label: "Was liegt schon vor?", groups: DOCS },
       ] },
     ],
   },
@@ -1692,10 +1792,11 @@ function renderStart() {
       h("ol", { class: "howto" },
         h("li", null, h("div", null, h("strong", { text: "Voraussetzungen" }), h("span", { text: "Schule, Ausbildung, Sprachen, PC-Kenntnisse" }))),
         h("li", null, h("div", null, h("strong", { text: "Interessen" }), h("span", { text: "Was dich reizt und was auf keinen Fall" }))),
+        h("li", null, h("div", null, h("strong", { text: "Richtung" }), h("span", { text: "Ein paar ehrliche Fragen, damit du sicher weißt, was du willst" }))),
         h("li", null, h("div", null, h("strong", { text: "Rahmen" }), h("span", { text: "Start, Dauer, Vollzeit oder Teilzeit, online oder vor Ort" }))),
         h("li", null, h("div", null, h("strong", { text: "Vorschläge" }), h("span", { text: "Passende Kurse mit Begründung und Termin – du klickst an, was du willst" }))),
         h("li", null, h("div", null, h("strong", { text: "Angaben & Abschicken" }), h("span", { text: "Daten für den Antrag, am Ende schickst du uns alles als PDF oder Text per WhatsApp oder E-Mail" })))),
-      h("p", { class: "small", text: "Bis zu deinen Vorschlägen brauchst du etwa 5 Minuten, für alles etwa 15. Deine Eingaben bleiben auf diesem Gerät, bis du sie selbst verschickst." })),
+      h("p", { class: "small", text: "Bis zu deinen Vorschlägen brauchst du etwa 10 Minuten, für alles etwa 20. Deine Eingaben bleiben auf diesem Gerät, bis du sie selbst verschickst." })),
     h("div", { class: "facts3", id: "factsFoerder" }),
     h("div", { class: "sheet" },
       h("div", { class: "sheet-title" }, h("h3", { text: "Was wir anbieten" }), h("span", { class: "mono", text: `${COURSES.length} Weiterbildungen` })),
@@ -1729,6 +1830,7 @@ function renderStep(i) {
     b._el = sheet;
     sec.append(sheet);
   });
+  if (s.key === "richtung") sec.append(h("div", { id: "dirBox", class: "sheet" }));
   if (s.emptyNote) sec.append(h("p", { class: "notice", "data-empty": "1", text: s.emptyNote, hidden: true }));
   if (s.note) sec.append(h("p", { class: "sheet-note", text: s.note }));
   if (s.key === "senden") sec.append(h("div", { class: "sheet", id: "foerderSheet" }), h("div", { class: "sheet", id: "stepsSheet" }), h("div", { class: "sheet", id: "missingSheet" }), sendSheet());
@@ -1845,21 +1947,33 @@ function evaluate(c) {
 
   const reqScore = reqs.length ? reqs.reduce((s, [st]) => s + STATUS_SCORE[st], 0) / reqs.length : 0.85;
 
-  // Interessen: Breite (wie viele deiner Top-Interessen der Kurs bedient), Fokus (wie viel vom Kurs
-  // zu deinen Interessen passt) und Stärke (ist eines deiner Interessen der Hauptinhalt des Kurses?)
+  // Interessen: Breite (wie viele deiner Interessen der Kurs bedient), Fokus (wie viel vom Kurs zu deinen
+  // Interessen passt – inklusive der Themen, die dazugehören, z. B. Netzwerke zur IT-Sicherheit), Stärke (dein
+  // wichtigstes Thema als Hauptinhalt des Kurses) und Jobziel (Schritt 3).
   const chosen = f.interessen || [];
   const ctags = c.tags || {};
   const tagSet = new Set(chosen.flatMap((k) => INTEREST_TAGS[k] || []));
+  Array.from(tagSet).forEach((t) => (IMPLIED_TAGS[t] || []).forEach((x) => tagSet.add(x)));
+  const primary = has(f.hauptinteresse) && chosen.includes(f.hauptinteresse) ? f.hauptinteresse : chosen.length === 1 ? chosen[0] : null;
+  const jobs = (f.ziel_job || []).filter((k) => JOB_TAGS[k]);
   let interest = 0.45;
   const hits = [];
+  let primaryHit = false, jobHit = null;
   if (tagSet.size) {
     const perInterest = chosen.map((k) => Math.max(0, ...(INTEREST_TAGS[k] || []).map((t) => ctags[t] || 0)) / 4);
     const breadth = Math.min(1, perInterest.reduce((a, b) => a + b, 0) / Math.min(chosen.length, 3));
     const total = Object.values(ctags).reduce((a, b) => a + b, 0) || 1;
     const matched = Object.entries(ctags).filter(([t]) => tagSet.has(t)).reduce((a, [, w]) => a + w, 0);
-    const strength = Math.max(0, ...Object.entries(ctags).filter(([t]) => tagSet.has(t)).map(([, w]) => w)) / 4;
-    interest = 0.45 * breadth + 0.35 * (matched / total) + 0.2 * strength;
+    const maxW = Math.max(0, ...perInterest);
+    const primaryW = primary ? Math.max(0, ...(INTEREST_TAGS[primary] || []).map((t) => ctags[t] || 0)) / 4 : maxW;
+    const strength = primary ? 0.7 * primaryW + 0.3 * maxW : maxW;
+    // Jobziel: Der Kurs muss das Thema mindestens so stark haben, wie der Job es braucht
+    const jobFits = jobs.map((k) => Math.max(0, ...Object.entries(JOB_TAGS[k]).map(([t, w]) => Math.min(w, ctags[t] || 0))) / 4);
+    const jobFit = jobs.length ? Math.max(0, ...jobFits) : strength;
+    interest = 0.3 * breadth + 0.15 * (matched / total) + 0.4 * strength + 0.15 * jobFit;
     chosen.forEach((k, i) => { if (perInterest[i] >= 0.5) hits.push(label(INTERESTS, k)); });
+    primaryHit = !!primary && primaryW >= 0.75;
+    jobs.forEach((k, i) => { if (!jobHit && jobFits[i] >= 0.75) jobHit = label(JOBS, k); });
   }
   const wants = new Set(f.wuensche || []);
   const wantHits = [];
@@ -1906,12 +2020,16 @@ function evaluate(c) {
     if (weeks > hi) { fit -= 0.15; notes.push(`nächster Termin erst ${ns.text}`); }
     else if (weeks < lo) info.push("Der nächste Termin liegt früher als gewünscht – ein späterer ist möglich.");
   }
+  const dir = richtung();
+  if (dir.key && dir.clarity >= 35 && courseDir(c) && courseDir(c) !== dir.key) { fit -= 0.1; notes.push(`andere Richtung als dein Ziel (${dir.label})`); }
   if (f.situation && BESCHAEFTIGT.includes(f.situation) && c.qcg === false) { fit -= 0.5; notes.push("für Beschäftigte nicht förderbar"); }
   fit = Math.max(0, fit);
 
   const hardMiss = reqs.some(([st]) => st === "miss") ? 0.55 : 1;
   const score = Math.round(100 * interest * (0.6 + 0.4 * reqScore) * hardMiss * (0.3 + 0.7 * fit) * factor);
   const reasons = [];
+  if (primaryHit) reasons.push("Dein wichtigstes Thema ist der Kern dieses Kurses");
+  if (jobHit) reasons.push("Passt zu deinem Jobziel: " + jobHit);
   if (hits.length) reasons.push("Passt zu: " + hits.slice(0, 3).join(", "));
   if (wantHits.length) reasons.push("Dir wichtig: " + wantHits.join(", "));
   const worst = reqs.find(([st]) => st === "miss") || reqs.find(([st]) => st === "bridge");
@@ -1928,6 +2046,59 @@ function fitLabel(s) {
 }
 function ranked() {
   return COURSES.map((c) => ({ c, e: evaluate(c) })).sort((a, b) => b.e.score - a.e.score || a.c.title.localeCompare(b.c.title, "de"));
+}
+
+// Richtung eines Kurses: die Richtung, deren Themen im Kurs am stärksten sind
+function courseDir(c) {
+  const t = c.tags || {};
+  let best = null, bestW = 0;
+  DIRS.forEach(([k, , tags]) => { const w = tags.reduce((s, x) => s + (t[x] || 0), 0); if (w > bestW) { best = k; bestW = w; } });
+  return best;
+}
+const dirOfTag = (tag) => (DIRS.find(([, , tags]) => tags.includes(tag)) || [])[0];
+const ALLTAG_PTS = { pc: { it: 2, digital: 1 }, kreativ: { digital: 2 }, menschen: { digital: 1, praxis: 1 }, draussen: { praxis: 2 }, unklar: {} };
+// Richtung der Person aus Schritt 2 und 3: Punkte je Richtung, Klarheit, was dafür spricht, was noch zu klären ist
+function richtung() {
+  const f = state.f;
+  const pts = { it: 0, digital: 0, praxis: 0 };
+  const add = (dir, n) => { if (dir && pts[dir] !== undefined) pts[dir] += n; };
+  const pro = [], todo = [];
+  let answered = 0;
+  const chosen = f.interessen || [];
+  chosen.forEach((k) => add(dirOfTag((INTEREST_TAGS[k] || [])[0]), 1));
+  const primary = has(f.hauptinteresse) && chosen.includes(f.hauptinteresse) ? f.hauptinteresse : chosen.length === 1 ? chosen[0] : null;
+  if (primary) { answered++; add(dirOfTag((INTEREST_TAGS[primary] || [])[0]), 3); pro.push("Dein wichtigstes Thema: " + label(INTERESTS, primary)); }
+  if (has(f.ziel_alltag)) {
+    answered++;
+    Object.entries(ALLTAG_PTS[f.ziel_alltag] || {}).forEach(([k, n]) => add(k, n));
+    if (f.ziel_alltag !== "unklar") pro.push("Dein Arbeitstag in drei Jahren: " + label(ZIEL_ALLTAG, f.ziel_alltag));
+  }
+  const jobs = (f.ziel_job || []).filter((k) => JOBS.some((j) => j[0] === k));
+  if (jobs.length) { answered++; jobs.forEach((k) => add(JOBS.find((j) => j[0] === k)[2], 2)); pro.push("Jobs, die du dir vorstellen kannst: " + jobs.map((k) => label(JOBS, k)).join(", ")); }
+  const te = (f.tech_erlebnis || []).filter((x) => x !== "nichts");
+  if (has(f.tech_erlebnis)) { answered++; te.forEach((x) => add("it", ["hack", "cmd"].includes(x) ? 2 : 1)); if (te.length) pro.push("Technik-Erfahrung: " + te.map((x) => label(TECH_ERLEBNIS, x)).join(", ")); }
+  if (has(f.tech_hilfe)) { answered++; if (f.tech_hilfe === "ich") { add("it", 2); pro.push("Du bist in deinem Umfeld die Technik-Anlaufstelle"); } else if (f.tech_hilfe === "ich_suche") add("it", 1); }
+  if (f.lern_dran === "lang") { add("it", 1); pro.push("Du bleibst dran, bis du es verstanden hast – genau das braucht IT"); }
+  if (f.lern_zuletzt === "laufend") pro.push("Du lernst laufend etwas Neues");
+  // Realitäts-Check
+  if (f.ziel_tempo === "schnell") todo.push("Du willst schnell raus. Ein 12-Monats-Lehrgang passt dazu nur, wenn du das Ziel wirklich willst – sonst ist ein kürzerer Kurs ehrlicher.");
+  if (f.lern_12m === "eher") todo.push("Respekt vor 12 Monaten Lernen ist normal. Feste Gruppe, Trainer und Stundenplan tragen dich – das besprechen wir.");
+  if (f.lern_12m === "nein") todo.push("12 Monate sind dir zu lang – dann kommen nur kürzere Weiterbildungen infrage.");
+  if (f.lern_dran === "lasse") todo.push("Wenn etwas nicht klappt, lässt du es liegen – in der IT ist Dranbleiben die halbe Arbeit. Überleg ehrlich, ob das zu dir passt.");
+  if (BESCHAEFTIGT.includes(f.situation)) {
+    if (f.lage_betrieb === "kurz") todo.push("Dein Betrieb stellt dich höchstens ein paar Monate frei – dann sind nur kurze Kurse möglich, oder wir reden über den Weg mit Bildungsgutschein.");
+    else if (f.lage_betrieb === "unklar" || f.lage_betrieb === "wohl") todo.push("Die Freistellung über 12 Monate ist noch nicht fest – das muss der Betrieb zusagen, bevor wir den Antrag stellen.");
+    if (f.lage_geld === "nein") todo.push("Dein Gehalt läuft weiter, aber du sagst, ein Jahr geht finanziell nicht – das klären wir im Gespräch.");
+  }
+  if (f.lage_umfeld === "offen") todo.push("Sprich zu Hause darüber, bevor du dich entscheidest – die Familie muss mitziehen, gerade im Familienbetrieb.");
+  if (f.lage_umfeld === "gegen") todo.push("Gegenwind zu Hause: Das nehmen wir ernst und besprechen es mit dir.");
+  if (f.tech_englisch === "nein") todo.push("Für IT-Kurse brauchst du etwas Englisch (Anleitungen, Fachbegriffe) – das lässt sich nebenbei aufholen.");
+  const total = pts.it + pts.digital + pts.praxis;
+  if (answered < 2 || total === 0) return { key: null, answered, pts, pro, todo };
+  const sorted = Object.entries(pts).sort((a, b) => b[1] - a[1]);
+  const [key, top] = sorted[0], second = sorted[1][1];
+  const clarity = Math.round(100 * Math.min(1, ((top - second) / Math.max(1, top)) * 0.6 + (top / total) * 0.4));
+  return { key, label: label(DIRS, key), clarity, pts, pro, todo, answered };
 }
 
 /* =====================================================================
@@ -2007,6 +2178,7 @@ function renderRecs() {
   const list = ranked();
   box.replaceChildren();
   const f = state.f;
+  const dir = richtung();
   const profileTags = [
     f.schule && label(SCHULE, f.schule),
     f.ausbildung === "ja" && f.beruf ? `Ausbildung ${f.beruf}` : f.ausbildung && label([["ja", "Ausbildung"], ["nein", "Keine Ausbildung"], ["abgebrochen", "Ausbildung abgebrochen"], ["laufend", "Ausbildung läuft"]], f.ausbildung),
@@ -2015,11 +2187,12 @@ function renderRecs() {
     ...(f.interessen || []).slice(0, 4).map((k) => label(INTERESTS, k)),
     f.dauer && f.dauer !== "egal" ? `max. ${f.dauer} Monate` : null,
     f.lernform && label([["online", "online"], ["praesenz", "vor Ort"], ["egal", "online oder vor Ort"]], f.lernform),
+    dir.key ? `Richtung: ${dir.label}` : null,
   ].filter(Boolean);
-  box.append(h("p", { class: "lead", text: "Wir haben alle Weiterbildungen der Gruppe mit deinen Angaben abgeglichen: Interessen zählen am meisten, dazu Voraussetzungen, Dauer, Format und Starttermin. Schau dir die Vorschläge an und tippe auf „Das will ich“." }));
+  box.append(h("p", { class: "lead", text: "Wir haben alle Weiterbildungen der Gruppe mit deinen Angaben abgeglichen: Dein wichtigstes Thema, deine Richtung und dein Jobziel zählen am meisten, dazu Voraussetzungen, Dauer, Format und Starttermin. Schau dir die Vorschläge an und tippe auf „Das will ich“." }));
   if (profileTags.length) box.append(h("div", { class: "profile-line", "aria-label": "Deine Angaben" }, profileTags.map((t) => h("span", { class: "tag", text: t }))));
   const miss = missingForRec();
-  if (miss > 0) box.append(h("p", { class: "notice" }, `Es fehlen noch ${miss} Angabe${miss === 1 ? "" : "n"} aus Schritt 1–3. Die Vorschläge werden genauer, wenn du sie ergänzt. `,
+  if (miss > 0) box.append(h("p", { class: "notice" }, `Es fehlen noch ${miss} Angabe${miss === 1 ? "" : "n"} aus den Schritten 1, 2 und 4. Die Vorschläge werden genauer, wenn du sie ergänzt. `,
     h("button", { type: "button", class: "btn small ghost", "data-go": "1", text: "Zu Schritt 1" })));
   box.append(h("div", { class: "rec-list" }, list.slice(0, 3).map((it, i) => card(it, i + 1))));
   box.append(h("div", { class: "sheet" },
@@ -2038,7 +2211,28 @@ function renderRecs() {
     h("span", { class: "eyebrow", text: "Deine Auswahl" }),
     ch ? h("b", { text: `${ch.title} (${PROV[ch.p]})` }) : h("b", { text: "Noch nichts ausgewählt" }),
     state.alts.length ? h("span", { class: "small", text: "Alternativen: " + state.alts.map((id) => (COURSES.find((c) => c.id === id) || {}).title).filter(Boolean).join(", ") }) : null,
-    !ch ? h("span", { class: "small", text: "Tippe bei einem Vorschlag auf „Das will ich“. Unsicher? Dann wähle einfach nichts – wir besprechen es zusammen." }) : null));
+    !ch ? h("span", { class: "small", text: "Tippe bei einem Vorschlag auf „Das will ich“. Unsicher? Dann wähle einfach nichts – wir besprechen es zusammen." }) : null,
+    ch && dir.key && dir.clarity >= 35 && courseDir(ch) && courseDir(ch) !== dir.key
+      ? h("span", { class: "small", text: `Hinweis: „${ch.short || ch.title}“ gehört zu „${label(DIRS, courseDir(ch))}“, deine Richtung aus Schritt 3 ist „${dir.label}“. Wenn du dir sicher bist, ist das okay – sonst sprechen wir vorher darüber.` })
+      : null));
+}
+
+// Schritt 3: Auswertung der Richtung, live beim Ausfüllen
+function renderDirection() {
+  const box = $("#dirBox");
+  if (!box) return;
+  const r = richtung();
+  box.replaceChildren(h("div", { class: "sheet-title" }, h("h3", { text: "Deine Richtung" }), h("span", { class: "mono", text: r.key ? `${r.clarity} % klar` : "noch offen" })));
+  if (!r.key) { box.append(h("p", { class: "small", text: "Beantworte die Fragen oben – dann siehst du hier, in welche Richtung es für dich geht." })); return; }
+  const grade = r.clarity >= 60 ? "Ziemlich klar" : r.clarity >= 35 ? "Tendenz" : "Noch offen";
+  const top = Math.max(1, ...Object.values(r.pts));
+  box.append(
+    h("div", { class: "choice-box" }, h("span", { class: "eyebrow", text: grade }), h("b", { text: r.label }), h("span", { class: "small", text: DIR_TEXT[r.key] })),
+    h("div", { class: "dirbars", "aria-label": "Punkte je Richtung" }, DIRS.map(([k, l]) => h("div", { class: "dirbar" + (k === r.key ? " top" : "") },
+      h("span", { text: l }), h("span", { class: "meter", "aria-hidden": "true" }, h("i", { style: `width:${Math.max(4, Math.round(100 * r.pts[k] / top))}%` })), h("span", { class: "mono", text: String(r.pts[k]) })))),
+    r.pro.length ? h("div", null, h("strong", { text: "Was dafür spricht" }), h("ul", { class: "why" }, r.pro.map((t) => h("li", { text: t })))) : null,
+    r.todo.length ? h("div", null, h("strong", { text: "Was noch geklärt werden muss" }), h("ul", { class: "why" }, r.todo.map((t) => h("li", { text: t })))) : null,
+    h("p", { class: "small", text: "Im Schritt „Vorschläge“ rechnen wir die Richtung mit ein. Wenn du unsicher bist: Schreib oben auf, welche Frage wir dir beantworten sollen – wir melden uns." }));
 }
 
 /* =====================================================================
@@ -2081,7 +2275,12 @@ function foerderItems() {
     if (f.frueher === "qcg") items.push(["bridge", "Frühere Förderung als Beschäftigter: Sie muss mindestens 2 Jahre zurückliegen."]);
     const k = sizeClass();
     if (k) items.push(["ok", `Betrieb mit ${k.label} (gewichtet ${fmtNum(k.w)}): Kurskosten ${k.lk} %, Zuschuss zum Gehalt ${k.aez} %${k.bonus ? " inkl. 5 Punkte für Tarifvertrag/Betriebsvereinbarung" : ""}.`]);
-    else items.push(["unknown", "Beschäftigtenzahl fehlt (Schritt 6) – davon hängt die Förderhöhe ab."]);
+    else items.push(["unknown", "Beschäftigtenzahl fehlt (Schritt 7) – davon hängt die Förderhöhe ab."]);
+    const brutto = Number(String(f.brutto || "").replace(",", ".")), std = Number(String(f.stunden || "").replace(",", "."));
+    if (brutto > 0 && std > 0 && brutto / (std * 52 / 12) < FOERDER.mindestlohn) {
+      const je = (brutto / (std * 52 / 12)).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      items.push(["bridge", `Gehalt prüfen: ${euro(brutto)} bei ${fmtNum(std)} Std./Woche sind ${je} € je Stunde – unter dem Mindestlohn von ${FOERDER.mindestlohn.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €. Ist das wirklich brutto, stimmen die Stunden? Der Zuschuss wird aus dem tatsächlichen Bruttogehalt berechnet.`]);
+    }
     if (f.freistellung === "ja") items.push(["ok", "Freistellung mit Fortzahlung des Gehalts ist mit dem Arbeitgeber besprochen."]);
     else if (f.freistellung === "nein") items.push(["miss", "Ohne Freistellung durch den Arbeitgeber gibt es keine Förderung als Beschäftigter."]);
     else items.push(["bridge", "Freistellung noch mit dem Arbeitgeber besprechen – das Gehalt läuft während des Kurses weiter."]);
@@ -2114,7 +2313,7 @@ function foerderItems() {
     evaluate(ch).reqs.filter(([st]) => st === "miss" || st === "bridge").forEach(([st, t]) => items.push([st, `Zugang „${ch.short || ch.title}“: ${t}`]));
     const ns = nextStart(ch);
     if (ns.kind === "date") items.push(["ok", `Nächster passender Starttermin: ${ns.text}.`]);
-  } else items.push(["unknown", "Noch kein Kurs ausgewählt (Schritt 4)."]);
+  } else items.push(["unknown", "Noch kein Kurs ausgewählt (Schritt 5)."]);
   if (emp) {
     const earliest = new Date(today().getTime() + FOERDER.vorlaufTage * DAY);
     items.push(["unknown", `Realistischer Kursbeginn frühestens ab ${fmtMonthYear(earliest)}, weil der Antrag vorher gestellt und entschieden sein sollte. Nichts verbindlich buchen, bevor die Zusage da ist.`]);
@@ -2189,6 +2388,7 @@ function buildSummary() {
   else L.push("★ Noch keine Auswahl – bitte gemeinsam besprechen");
   state.alts.forEach((id) => { const c = COURSES.find((x) => x.id === id); if (c) L.push(`• Alternative: ${c.title} (${PROV[c.p]}) – Passung ${evaluate(c).score} %`); });
   L.push("Top-Vorschläge laut Check: " + list.slice(0, 5).map((it) => `${it.c.title} ${it.e.score} %`).join(" · "));
+  { const dir = richtung(); if (dir.key) L.push(`Richtung laut Check (Schritt 3): ${dir.label} – ${dir.clarity} % klar`); }
   if (ch) {
     const open = evaluate(ch).reqs.filter(([st]) => st !== "ok");
     if (open.length) L.push("Zugang prüfen: " + open.map(([st, t]) => `${ICON[st]} ${t}`).join("; "));
@@ -2310,6 +2510,8 @@ function pdfModel() {
     if (open.length) kurs.push(["Zugang prüfen", open.map(([st, t]) => `[${PDF_MARK[st]}] ${t}`).join("\n")]);
   } else kurs.push(["Das will ich", "Noch keine Auswahl – bitte gemeinsam besprechen"]);
   state.alts.forEach((id) => { const c = COURSES.find((x) => x.id === id); if (c) kurs.push(["Alternative", `${c.title} (${PROV[c.p]})`]); });
+  const dir = richtung();
+  if (dir.key) kurs.push(["Richtung laut Check (Schritt 3)", `${dir.label} – ${dir.clarity} % klar`]);
   kurs.push(["Top-Vorschläge laut Check", ranked().slice(0, 5).map((it) => `${it.c.title} – ${it.e.score} %`).join("\n")]);
   sections.push({ title: "Gewählte Weiterbildung", rows: kurs });
   sections.push({ title: "Förder-Check (automatisch)", items: foerderItems() });
@@ -2331,7 +2533,7 @@ function pdfModel() {
       const val = fmtValue(q);
       rows.push([`${q.code} ${q.label.replace(/\?$/, "")}`, val || (q.req ? "fehlt" : "–"), ref(FORMREF[q.id]), q.req && !val]);
     });
-    if (b.code === "11") {
+    if (b.code === "14") {
       const k = sizeClass();
       if (k) rows.push(["Beschäftigte nach BA-Zählweise", `${fmtNum(k.w)} (${k.label})`, ref("AEZ Betriebsgröße · VM-A 36"), false]);
     }
@@ -2561,6 +2763,13 @@ function refresh(full) {
     const empty = sec.querySelector("[data-empty]");
     if (empty) { const s = STEPS[Number(sec.dataset.step)]; empty.hidden = (s.blocks || []).some(blockVisible); }
   });
+  // Hauptinteresse: nur die gewählten Interessen anbieten
+  const hi = form.querySelector('[data-q="hauptinteresse"]');
+  if (hi) {
+    const sel = new Set(state.f.interessen || []);
+    $$("label.chip", hi).forEach((l) => { l.hidden = !sel.has(l.querySelector("input").value); });
+    if (has(state.f.hauptinteresse) && !sel.has(state.f.hauptinteresse)) { state.f.hauptinteresse = ""; $$('input[name="hauptinteresse"]', form).forEach((inp) => { inp.checked = false; }); persist(); }
+  }
   // Fortschritt
   const req = allQuestions().filter(({ q, b }) => q.req && qVisible(q, b));
   const done = req.filter(({ q }) => answered(q)).length;
@@ -2573,6 +2782,7 @@ function refresh(full) {
   });
   const cur = STEPS[state.step].key;
   if (cur === "vorschlaege" && full !== false) renderRecs();
+  if (cur === "richtung") renderDirection();
   if (cur === "senden") updateSend();
 }
 function go(i, focusId) {
@@ -2732,6 +2942,7 @@ function boot(data) {
   renderAll();
   renderFacts();
   applyState();
+  if (state.step > 3 && !stepComplete(3)) { state.step = 3; setTimeout(() => toast("Neu: Schritt 3 „Richtung“ – ein paar kurze Fragen, dann geht es weiter wie gehabt."), 500); }
   go(state.step || 0);
   (async () => {
     if (window.claude && window.claude.use) {
